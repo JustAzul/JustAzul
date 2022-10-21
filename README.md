@@ -2,7 +2,6 @@
     <a href="https://justazul.com">
         <img height="180em"
             src="https://github-stats.justazul.com/api/top-langs/?username=JustAzul&langs_count=8&layout=compact&theme=github_dark">
-            &nbsp;
         <img height="180em"
             src="https://github-stats.justazul.com/api?username=JustAzul&show_icons=true&include_all_commits=true&count_private=true&disable_animations=false&theme=github_dark&custom_title=GitHub%20Insights">
     </a>
