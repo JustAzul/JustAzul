@@ -7,6 +7,31 @@ then
     exit 1
 fi
 
+# Check if necessary tools and dependencies are installed
+if ! command -v fallocate &> /dev/null; then
+    echo "fallocate is not installed, installing it now..."
+    if ! apt-get install -y fallocate; then
+        echo "Failed to install fallocate, please install it manually"
+        exit 1
+    fi
+fi
+
+if ! command -v mkswap &> /dev/null; then
+    echo "mkswap is not installed, installing it now..."
+    if ! apt-get install -y util-linux; then
+        echo "Failed to install mkswap, please install it manually"
+        exit 1
+    fi
+fi
+
+if ! command -v swapon &> /dev/null; then
+    echo "swapon is not installed, installing it now..."
+    if ! apt-get install -y util-linux; then
+        echo "Failed to install swapon, please install it manually"
+        exit 1
+    fi
+fi
+
 # Check if swap is already enabled
 if swapon --show | grep -q '/swap'; then
   echo "Swap is already enabled"
