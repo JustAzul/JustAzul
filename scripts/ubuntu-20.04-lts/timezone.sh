@@ -1,34 +1,51 @@
 #!/bin/bash
 
-current_timezone=$(date +%Z)
-echo "Current timezone: $current_timezone"
+echo "Current timezone: $(date +%Z)"
 
+options=(
+  "-0"
+  "-1"
+  "-2"
+  "-3"
+  "-4"
+  "-5"
+  "-6"
+  "-7"
+  "-8"
+  "-9"
+  "-10"
+  "-11"
+  "-12"
+  "-13"
+  "-14"
+  "+0"
+  "+1"
+  "+2"
+  "+3"
+  "+4"
+  "+5"
+  "+6"
+  "+7"
+  "+8"
+  "+9"
+  "+10"
+  "+11"
+  "+12"
+)
 PS3='Please select your timezone: '
-options=("America/Recife" "America/New_York" "Asia/Tokyo" "Europe/Berlin" "Quit")
 select opt in "${options[@]}"
 do
-    case $opt in
-        "America/Recife")
-            timezone="America/Recife"
-            break
-            ;;
-        "America/New_York")
-            timezone="America/New_York"
-            break
-            ;;
-        "Asia/Tokyo")
-            timezone="Asia/Tokyo"
-            break
-            ;;
-        "Europe/Berlin")
-            timezone="Europe/Berlin"
-            break
-            ;;
-        "Quit")
-            exit 0
-            ;;
-        *) echo "Invalid option $REPLY";;
-    esac
-done
+    timezone="Etc/GMT${opt##* }"
 
-sudo ln -fs /usr/share/zoneinfo/$timezone /etc/localtime && sudo dpkg-reconfigure -f noninteractive tzdata
+    # Confirm the change
+    read -p "Do you want to change timezone to $timezone? [y/n]" -n 1 -r
+    echo   
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        # Change the timezone
+        sudo ln -fs /usr/share/zoneinfo/$timezone /etc/localtime && sudo dpkg-reconfigure -f noninteractive tzdata
+        echo "Timezone changed to $timezone"
+    else
+        echo "Timezone not changed"
+    fi
+    break
+done
