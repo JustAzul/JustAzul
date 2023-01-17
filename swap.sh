@@ -44,14 +44,6 @@ if [ -z "$size" ]; then
   size=2
 fi
 
-# Check available memory
-free_mem=$(free -m | awk '/^Mem:/{print $4}')
-
-if [ $free_mem -lt $(($size*1024)) ]; then
-  echo "Not enough memory available"
-  exit 1
-fi
-
 # Check available space in partition
 partition=$(df / | awk '{print $1}' | tail -n 1)
 avail_space=$(df -BG $partition | tail -n 1 | awk '{print $4}' | sed 's/G//')
