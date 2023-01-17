@@ -102,3 +102,4 @@ fi
 
 echo "Swap file created successfully"
 exit 0
+fi
