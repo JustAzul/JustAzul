@@ -1,0 +1,80 @@
+blueprint:
+  name: Control input boolean with scenes
+  description: Toggle a scene with an input boolean.
+  domain: automation
+  input:
+    input_boolean:
+      name: Input Boolean
+      selector:
+        entity:
+          domain: input_boolean
+    scene_on:
+      name: Scene that turns ON the input boolean
+      selector:
+        entity:
+          domain: scene
+    scene_off:
+      name: Scene that turns OFF the input boolean 
+      selector:
+        entity:
+          domain: scene
+  source_url: https://github.com/JustAzul/JustAzul/blob/main/hass/blueprints/helper_state_toggle_input_boolean_with_scene.yaml
+mode: single
+variables:
+  input_boolean: !input input_boolean
+  scene_on: !input scene_on
+  scene_off: !input scene_off
+trigger:
+- platform: event
+  event_type: call_service
+  event_data:
+    service_data:
+      entity_id: !input scene_off
+    domain: scene
+    service: turn_on
+  id: service_scene_off
+- platform: event
+  event_type: call_service
+  event_data:
+    service_data:
+      entity_id: !input scene_on
+    domain: scene
+    service: turn_on
+  id: service_scene_on
+- platform: state
+  entity_id: !input input_boolean
+  to: 'on'
+  id: input_boolean_on
+- platform: state
+  entity_id: !input input_boolean
+  to: 'off'
+  id: input_boolean_off
+action:
+  - alias: 'Turn on input boolean when scene is turned on'
+    if:
+    - '{{ trigger.id == ''service_scene_on'' }}'
+    then:
+    - service: input_boolean.turn_on
+      data:
+        entity_id: !input input_boolean
+  - alias: 'Turn off input boolean when scene is turned off'
+    if:
+    - '{{ trigger.id == ''service_scene_off'' }}'
+    then:
+    - service: input_boolean.turn_off
+      data:
+        entity_id: !input input_boolean
+  - alias: 'Call Scene on when input boolean is turned on'
+    if:
+    - '{{ trigger.id == ''input_boolean_on'' }}'
+    then:
+    - service: scene.turn_on
+      data:
+        entity_id: !input scene_on
+  - alias: 'Call Scene off when input boolean is turned off'
+    if:
+    - '{{ trigger.id == ''input_boolean_off'' }}'
+    then:
+    - service: scene.turn_on
+      data:
+        entity_id: !input scene_off
