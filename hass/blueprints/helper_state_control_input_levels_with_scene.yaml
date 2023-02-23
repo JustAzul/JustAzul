@@ -1,0 +1,107 @@
+blueprint:
+  name: Control input number with scenes
+  description: A blueprint for incrementing or decrementing an input number when a scene is activated and then calling the corresponding increment/decrement service x times with a delay between each call, where x is the positive difference between the old and new value of the input number
+  domain: automation
+  input:
+    input_number:
+      name: Input Number
+      description: The input number to be incremented or decremented.
+      selector:
+        entity:
+          domain: input_number
+    scene_increment:
+      name: Increment Scene
+      description: The scene to activate when incrementing the input number.
+      selector:
+        entity:
+          domain: scene
+    scene_decrement:
+      name: Decrement Scene
+      description: The scene to activate when decrementing the input number.
+      selector:
+        entity:
+          domain: scene
+    input_number_delay:
+      name: Delay Timer
+      description: Delay in milliseconds between each call of the increment/decrement scene.
+      default: 500
+      selector:
+        number:
+          min: 100
+          max: 2000
+          step: 100
+  source_url: https://github.com/JustAzul/JustAzul/blob/main/hass/blueprints/helper_state_control_input_levels_with_scene.yaml
+mode: single
+variables:
+  input_number_delay: !input input_number_delay
+  input_number: !input input_number
+  scene_decrement: !input scene_decrement
+  scene_increment: !input scene_increment
+trigger:
+- platform: event
+  event_type: call_service
+  event_data:
+    service_data:
+      entity_id: !input scene_decrement
+    domain: scene
+    service: turn_on
+  id: service_scene_decrement
+- platform: event
+  event_type: call_service
+  event_data:
+    service_data:
+      entity_id: !input scene_increment
+    domain: scene
+    service: turn_on
+  id: service_scene_increment
+- platform: state
+  entity_id: !input input_number
+  id: input_number_changed
+action:
+  - alias: 'Increment input number when scene is turned on'
+    if:
+    - '{{ trigger.id == ''service_scene_increment'' }}'
+    then:
+    - service: input_number.increment
+      data:
+        entity_id: !input input_number
+  - alias: 'Decrement input number when scene is turned on'
+    if:
+    - '{{ trigger.id == ''service_scene_decrement'' }}'
+    then:
+    - service: input_number.decrement
+      data:
+        entity_id: !input input_number
+  - alias: 'Call increment/decrement service x times following input number changes'
+    if:
+    - '{{ trigger.id == ''input_number_changed'' }}'
+    then:
+    - choose:
+      - conditions:
+        - '{{ trigger.to_state.state | int > trigger.from_state.state | int }}'
+        sequence:
+        - repeat:
+            count: '{{ trigger.to_state.state | int - trigger.from_state.state | int }}'
+            sequence:
+            - service: scene.turn_on
+              data:
+                entity_id: !input scene_increment
+            - delay:
+                hours: 0
+                minutes: 0
+                seconds: 0
+                milliseconds: !input input_number_delay
+      - conditions:
+        - '{{ trigger.to_state.state | int < trigger.from_state.state | int }}'
+        sequence:
+        - repeat:
+            count: '{{ trigger.from_state.state | int - trigger.to_state.state | int }}'
+            sequence:
+            - service: scene.turn_on
+              data:
+                entity_id: !input scene_decrement
+            - delay:
+                hours: 0
+                minutes: 0
+                seconds: 0
+                milliseconds: !input input_number_delay
