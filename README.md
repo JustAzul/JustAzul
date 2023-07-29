@@ -31,6 +31,9 @@
                 src="https://img.shields.io/discord/585223586562703392?label=Discord&style=for-the-badge&logo=discord&logoColor=white">
         </a>
     </div>
-        <img style="width: 100%;"
-            src="https://github.com/JustAzul/JustAzul/blob/output/github-contribution-grid-snake.svg">
+        <picture>
+                <source media="(prefers-color-scheme: dark)" srcset="github-snake-dark.svg" />
+                <source media="(prefers-color-scheme: light)" srcset="github-snake.svg" />
+                <img style="width: 100%;" alt="github-snake" src="github-snake.svg">
+        </picture>       
 </div>
