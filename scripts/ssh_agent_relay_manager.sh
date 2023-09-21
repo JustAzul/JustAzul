@@ -43,7 +43,7 @@ kill_pids() {
 
     # Check if there are any PIDs to kill
     if [ -z "$kill_pids_pids" ]; then
-        echo "No processes found to kill."
+        # echo "No processes found to kill."
         return
     fi
 
@@ -56,8 +56,11 @@ kill_pids() {
 socat_running=$(is_process_running "socat_npiperelay")
 npiperelay_running=$(is_process_running "npiperelay")
 
-# If both are running, set SHOULD_START_AGENT to 1 (false). Otherwise, set it to 0 (true).
-SHOULD_START_AGENT=$((socat_running == 1 || npiperelay_running == 1 ? 1 : 0))
+if [ "$socat_running" -eq 1 ] || [ "$npiperelay_running" -eq 1 ]; then
+    SHOULD_START_AGENT=0
+else
+    SHOULD_START_AGENT=1
+fi
 
 if [ "$SHOULD_START_AGENT" = 0 ]; then
     # If the socket file exists, remove it
