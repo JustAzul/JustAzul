@@ -57,7 +57,7 @@ socat_running=$(is_process_running "socat_npiperelay")
 npiperelay_running=$(is_process_running "npiperelay")
 
 # If both are running, set SHOULD_START_AGENT to 1 (false). Otherwise, set it to 0 (true).
-SHOULD_START_AGENT=$((socat_running == 0 && npiperelay_running == 0 ? 1 : 0))
+SHOULD_START_AGENT=$((socat_running == 1 || npiperelay_running == 1 ? 1 : 0))
 
 if [ "$SHOULD_START_AGENT" = 0 ]; then
     # If the socket file exists, remove it
