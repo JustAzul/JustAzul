@@ -1,4 +1,5 @@
 #!/bin/sh
+
 # Configure ssh forwarding
 export SSH_AUTH_SOCK="$HOME/.1password/agent.sock"
 
@@ -46,8 +47,8 @@ kill_pids() {
         return
     fi
 
-    for pid in $kill_pids_pids; do
-        kill "$pid" 2>/dev/null && echo "Killed PID: $pid" || echo "Failed to kill PID: $pid"
+    echo "$kill_pids_pids" | while IFS= read -r pid; do
+        kill -9 "$pid" 2>/dev/null && echo "Killed PID: $pid" || echo "Failed to kill PID: $pid"
     done
 }
 
