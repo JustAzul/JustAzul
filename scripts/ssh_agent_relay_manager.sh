@@ -27,11 +27,9 @@ is_process_running() {
 
     # Check if there's at least one PID in the list
     if [ -n "$is_process_running_pids" ]; then
-        # echo "$1 is running. PIDs: $is_process_running_pids" >&2
         echo 0 # 0 for true
         return
     else
-        # echo "$1 is not running." >&2
         echo 1 # 1 for false
         return
     fi
@@ -40,23 +38,24 @@ is_process_running() {
 # Function to kill each PID from a given list
 kill_pids() {
     kill_pids_pids="$1"
-
-    # Check if there are any PIDs to kill
     if [ -z "$kill_pids_pids" ]; then
-        # echo "No processes found to kill."
         return
     fi
 
     echo "$kill_pids_pids" | while IFS= read -r pid; do
-        kill -9 "$pid" 2>/dev/null && echo "Killed PID: $pid" || echo "Failed to kill PID: $pid"
+        # First, try with SIGTERM
+        kill -15 "$pid" 2>/dev/null
+        sleep 1
+        if kill -0 "$pid" 2>/dev/null; then
+            kill -9 "$pid" 2>/dev/null && echo "Forcefully killed PID: $pid" || echo "Failed to kill PID: $pid"
+        else
+            echo "Gracefully killed PID: $pid"
+        fi
     done
 }
 
 kill_1password_relay_pids() {
-    # To kill socat_npiperelay processes
     kill_pids "$(get_socat_npiperelay_pids)"
-
-    # To kill npiperelay processes
     kill_pids "$(get_npiperelay_pids)"
 }
 
@@ -79,40 +78,27 @@ kill_socket_file() {
 
 start_relay_process() {
     echo "Starting SSH-Agent relay..."
-
-    # Start the relay process
     (setsid socat UNIX-LISTEN:"$SSH_AUTH_SOCK",fork EXEC:"npiperelay.exe -ei -s //./pipe/openssh-ssh-agent",nofork &) >>~/socat.log 2>&1
 
-    # Wait for the socket to appear (max 5 seconds)
-    SOCKET_WAIT_TIME=0
-    while [ ! -S "$SSH_AUTH_SOCK" ] && [ "$SOCKET_WAIT_TIME" -lt 5 ]; do
-        # Wait for 1 second before checking again
-        sleep 1
-        SOCKET_WAIT_TIME=$((SOCKET_WAIT_TIME + 1))
-    done
-
-    # If the socket does not exist after waiting
-    if [ ! -S "$SSH_AUTH_SOCK" ]; then
-        echo "Error: SSH_AUTH_SOCK does not exist after starting the relay process."
-        exit 1
+    if [ $? -ne 0 ]; then
+        echo "Error starting socat relay process."
     fi
 }
 
 should_start_agent() {
-    # Assigning the result to the variable
     socat_running=$(is_process_running "socat_npiperelay")
     npiperelay_running=$(is_process_running "npiperelay")
 
     if [ "$socat_running" -eq 1 ] || [ "$npiperelay_running" -eq 1 ]; then
-        echo 0
+        echo 1
         return
     else
-        echo 1
+        echo 0
         return
     fi
 }
 
-if [ "$(should_start_agent)" -eq 0 ]; then
+if [ "$(should_start_agent)" -eq 1 ]; then
     kill_socket_file
     kill_1password_relay_pids
     start_relay_process
