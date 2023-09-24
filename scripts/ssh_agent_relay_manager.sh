@@ -71,6 +71,10 @@ start_relay_process() {
 }
 
 should_start_agent() {
+    # always start agent as a temporary hotfix. npiperelay.exe isnt always available
+    echo 0
+    return
+    
     socat_running=$(is_process_running "socat_npiperelay")
     npiperelay_running=$(is_process_running "npiperelay")
 
