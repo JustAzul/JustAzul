@@ -11,7 +11,6 @@ bar_percentage_scale=2
 show_progress() {
     current="$1"
     total="$2"
-    verbose="$3"
 
     # calculate the progress in percentage 
     percent=$(bc <<< "scale=$bar_percentage_scale; 100 * $current / $total" )
@@ -48,7 +47,7 @@ pull_and_gc() {
     dir=$1
     cd $dir
 
-    output=$(git pull 2>&1 && git gc --auto 2>&1)
+    output=$(git fetch --prune 2>&1 && git pull 2>&1 && git branch --merged | grep -E -v "(^\*|master|main|dev|develop)" | xargs git branch -d 2>&1 && git gc --auto 2>&1)
 
     # Print status
     echo $dir: $output
