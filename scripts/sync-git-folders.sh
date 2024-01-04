@@ -1,6 +1,6 @@
 #!/bin/bash
 
-max_jobs=10
+max_jobs=3
 
 # Function to display progress
 bar_size=40
@@ -11,64 +11,78 @@ bar_percentage_scale=2
 show_progress() {
     current="$1"
     total="$2"
+    message="$3"
 
-    # calculate the progress in percentage 
-    percent=$(bc <<< "scale=$bar_percentage_scale; 100 * $current / $total" )
-    # The number of done and todo characters
-    done=$(bc <<< "scale=0; $bar_size * $percent / 100" )
-    todo=$(bc <<< "scale=0; $bar_size - $done" )
+    percent=$(bc <<<"scale=$bar_percentage_scale; 100 * $current / $total")
+    done=$(bc <<<"scale=0; $bar_size * $percent / 100")
+    todo=$(bc <<<"scale=0; $bar_size - $done")
 
-    # build the done and todo sub-bars
     done_sub_bar=$(printf "%${done}s" | tr " " "${bar_char_done}")
     todo_sub_bar=$(printf "%${todo}s" | tr " " "${bar_char_todo}")
 
-    # output the bar
-    echo -ne "\r ${percent}% [${done_sub_bar}${todo_sub_bar}] > ${current}/${total}"
+    # Clear the line
+    echo -ne "\r\033[K"
+
+    # Print the new line
+    echo -ne "\r ${percent}% [${done_sub_bar}${todo_sub_bar}] > ${current}/${total} - ${message}"
 }
 
-# Find all git directories and store them
-git_dirs=$(find $1 -name .git 2>&1 | grep -v "Permission denied")
-
-# Get parent of each .git directory
-git_dirs=$(dirname $git_dirs)
-
-# Count total number of directories
+# Find all git directories and store their parent directories
+git_dirs=$(find "$1" -name .git -type d 2>&1 | grep -v "Permission denied" | xargs -I {} dirname "{}")
 total_dirs=$(echo "$git_dirs" | wc -l)
-
-# Initialize counter
 count=0
 
-# Create named pipe
 pipe=$(mktemp -u)
-mkfifo $pipe
+mkfifo "$pipe"
 
-# Function to pull and gc
 pull_and_gc() {
     dir=$1
-    cd $dir
+    message=""
 
-    output=$(git fetch --prune 2>&1 && git pull 2>&1 && git branch --merged | grep -E -v "(^\*|master|main|dev|develop)" | xargs git branch -d 2>&1 && git gc --auto 2>&1)
+    # Get the parent directory name
+    parent_dir=$(basename "$(dirname "$dir")")
 
-    # Print status
-    echo $dir: $output
+    # Get the basename of the repository
+    repo_name=$(basename "$dir")
+
+    display_path="${parent_dir}/${repo_name}"
+
+    if [ -d "$dir" ]; then
+        cd "$dir" && {
+            if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+                git fetch --prune 2>&1
+
+                git_output="$(git pull 2>&1)"
+
+                branches_to_delete=$(git branch --merged | grep -E -v "(^\*|master|main|dev|develop)" || :)
+                if [ -n "$branches_to_delete" ]; then
+                    for branch in $branches_to_delete; do
+                        git branch -d "$branch" 2>&1
+                    done
+                fi
+
+                git gc --auto 2>&1
+                message="$display_path: $git_output"
+            else
+                message="$display_path is not a Git repository"
+            fi
+        } || message="$display_path: Failed to change directory"
+    else
+        message="$display_path is not a directory"
+    fi
+
+    echo "$message" >&3
 }
 
-# Export it so it's available to parallel jobs
 export -f pull_and_gc
 
-# Loop through each git directory
-echo "$git_dirs" | xargs -P $max_jobs -n 1 -I {} bash -c 'pull_and_gc "$@"' _ {} > $pipe &
+echo "$git_dirs" | xargs -P $max_jobs -n 1 -I {} bash -c 'pull_and_gc "$@"' _ {} 3>"$pipe" &
 
-# Handle output
-while IFS= read -r line
-do
-    # Calculate percentage
+while IFS= read -r line; do
     count=$((count + 1))
+    show_progress $count "$total_dirs" "$line"
+done <"$pipe"
 
-    # Show progress
-    show_progress $count $total_dirs $line
-done < $pipe
-
-rm $pipe
+rm "$pipe"
 
 printf "\nFinished syncing repositories.\n"
